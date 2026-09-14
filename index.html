@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Event Suppliers</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Event Suppliers</div>
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#categories">Categories</a>
+      <a href="#suppliers">Suppliers</a>
+      <a href="#contact">Contact Us</a>
+      <a href="admin/index.html">Admin</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-card">
+        <p class="eyebrow">Find trusted suppliers for your event</p>
+        <h1>Search event suppliers near your venue</h1>
+        <p class="hero-copy">Discover photobooths, lights & sounds, caterers, pop-up bars, coffee booths and more.</p>
+        <div class="search-grid">
+          <input id="serviceSearch" type="search" placeholder="What service are you looking for?" />
+          <input id="locationSearch" type="text" placeholder="Where is your event?" />
+          <button id="nearMeBtn" class="btn secondary" type="button">Use My Location</button>
+          <button id="searchBtn" class="btn primary" type="button">Find Suppliers</button>
+        </div>
+        <p id="locationStatus" class="helper"></p>
+      </div>
+    </section>
+
+    <section class="section" id="categories">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Browse</p>
+          <h2>Popular categories</h2>
+        </div>
+      </div>
+      <div id="categoryGrid" class="category-grid"></div>
+    </section>
+
+    <section class="section" id="suppliers">
+      <div class="section-head supplier-head">
+        <div>
+          <p class="eyebrow">Results</p>
+          <h2>Suppliers</h2>
+          <p id="resultSummary" class="helper">Showing available suppliers.</p>
+        </div>
+        <div class="toolbar">
+          <select id="categoryFilter"><option value="">All categories</option></select>
+          <select id="ratingFilter"><option value="0">Any rating</option><option value="4">4+ stars</option><option value="4.5">4.5+ stars</option></select>
+          <select id="sortFilter"><option value="nearest">Nearest</option><option value="rating">Highest rated</option><option value="reviews">Most reviewed</option><option value="az">A-Z</option></select>
+        </div>
+      </div>
+      <div id="supplierGrid" class="supplier-grid"></div>
+      <div id="emptyState" class="empty-state hidden">No suppliers found. Try another category or location.</div>
+    </section>
+
+    <section class="section contact-section" id="contact">
+      <div class="section-head"><div><p class="eyebrow">Need changes or want to be listed?</p><h2>Contact Us</h2><p class="helper">Send a ticket to the admin for business updates, new supplier listings, featured subscriptions, or other concerns.</p></div></div>
+      <div class="contact-layout">
+        <form id="contactTicketForm" class="contact-card form-grid">
+          <label>Request Type<select id="ticketType" required><option value="">Select request type</option><option value="update_business">Update Existing Business</option><option value="add_business">Add My Business</option><option value="featured_subscription">Avail Featured Subscription</option><option value="other">Other Concern</option></select></label>
+          <label>Your Name<input id="ticketName" maxlength="100" required /></label>
+          <label>Business Name<input id="ticketBusinessName" maxlength="150" placeholder="Optional" /></label>
+          <label>Email<input id="ticketEmail" type="email" maxlength="160" /></label>
+          <label>Contact Number<input id="ticketContact" maxlength="40" /></label>
+          <label class="full">Message<textarea id="ticketMessage" rows="5" maxlength="1000" required placeholder="Tell us what you need updated, added, or which featured plan you want."></textarea></label>
+          <div class="full form-actions"><button id="submitTicketBtn" class="btn primary" type="submit">Submit Ticket</button></div>
+        </form>
+        <aside class="contact-owner-card">
+          <p class="eyebrow">Direct Message</p><h3>Message the Admin</h3><p>If you prefer Messenger, use the button below to contact the owner/admin directly.</p>
+          <a id="ownerMessengerBtn" class="btn primary hidden" target="_blank" rel="noopener">Open Messenger</a>
+          <p id="ownerMessengerMissing" class="helper">Messenger link is not configured yet.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">© 2026 Event Suppliers Directory</footer>
+
+
+  <div id="supplierModal" class="modal hidden supplier-detail-modal" role="dialog" aria-modal="true" aria-labelledby="supplierModalTitle">
+    <div class="modal-card supplier-detail-card">
+      <button id="closeSupplierModalBtn" class="modal-close" type="button" aria-label="Close supplier details">×</button>
+      <div id="supplierModalContent"></div>
+    </div>
+  </div>
+
+  <div id="galleryLightbox" class="modal hidden gallery-lightbox" role="dialog" aria-modal="true" aria-label="Gallery image preview">
+    <div class="gallery-lightbox-card">
+      <button id="closeGalleryLightboxBtn" class="modal-close" type="button" aria-label="Close image preview">×</button>
+      <img id="galleryLightboxImage" alt="Supplier gallery preview" />
+    </div>
+  </div>
+
+  <div id="reviewModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
+    <div class="modal-card review-modal-card">
+      <button id="closeReviewModalBtn" class="modal-close" type="button" aria-label="Close">×</button>
+      <p class="eyebrow">Client Review</p>
+      <h2 id="reviewModalTitle">Leave a Review</h2>
+      <p id="reviewSupplierName" class="review-supplier-name"></p>
+
+      <div id="approvedReviewPreview" class="approved-review-preview"></div>
+
+      <form id="publicReviewForm" class="form-grid single-col review-form">
+        <input id="reviewSupplierId" type="hidden" />
+        <label>Your Name<input id="reviewerName" maxlength="80" required placeholder="Enter your name" /></label>
+        <div>
+          <label class="review-rating-label">Your Rating</label>
+          <div id="starPicker" class="star-picker" role="radiogroup" aria-label="Choose rating from 1 to 5 stars">
+            <button type="button" class="star-btn" data-rating="1" aria-label="1 star">★</button>
+            <button type="button" class="star-btn" data-rating="2" aria-label="2 stars">★</button>
+            <button type="button" class="star-btn" data-rating="3" aria-label="3 stars">★</button>
+            <button type="button" class="star-btn" data-rating="4" aria-label="4 stars">★</button>
+            <button type="button" class="star-btn" data-rating="5" aria-label="5 stars">★</button>
+          </div>
+          <input id="reviewRating" type="hidden" required />
+          <small id="ratingHelp" class="field-help">Select 1 to 5 stars.</small>
+        </div>
+        <label>Short Review<textarea id="reviewMessage" rows="4" maxlength="400" required placeholder="Share your experience with this supplier"></textarea><small class="field-help"><span id="reviewCharCount">0</span>/400 characters</small></label>
+        <label class="review-honeypot" aria-hidden="true">Website<input id="reviewWebsite" tabindex="-1" autocomplete="off" /></label>
+        <p class="helper review-note">Reviews are submitted as pending and will appear publicly only after Admin approval.</p>
+        <div class="form-actions">
+          <button id="cancelReviewBtn" class="btn secondary" type="button">Cancel</button>
+          <button id="submitReviewBtn" class="btn primary" type="submit">Submit Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="publicToastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
