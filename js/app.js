@@ -84,11 +84,15 @@ function renderSuppliers(list){
   $('resultSummary').textContent=`${list.length} supplier${list.length===1?'':'s'} found.`;
 }
 function runSearch(){
-  const q=$('serviceSearch').value.trim().toLowerCase(), loc=$('locationSearch').value.trim().toLowerCase(), cat=$('categoryFilter').value, minRating=parseFloat($('ratingFilter').value||'0'), sort=$('sortFilter').value;
+  const q=$('serviceSearch').value.trim().toLowerCase(), loc=$('locationSearch').value.trim().toLowerCase(), cat=$('categoryFilter').value, minRating=parseFloat($('ratingFilter').value||'0'), featured=$('featuredFilter')?.value||'all', verified=$('verifiedFilter')?.value||'all', sort=$('sortFilter').value;
   let list=suppliers.filter(s=>!q||[s.business_name,s.category,...s.services].join(' ').toLowerCase().includes(q));
   if(loc) list=list.filter(s=>[s.address,s.city,s.province].join(' ').toLowerCase().includes(loc));
   if(cat) list=list.filter(s=>s.category===cat);
   list=list.filter(s=>avgRating(s)>=minRating);
+  if(featured==='featured') list=list.filter(s=>isFeaturedActive(s));
+  if(featured==='regular') list=list.filter(s=>!isFeaturedActive(s));
+  if(verified==='verified') list=list.filter(s=>!!s.is_verified);
+  if(verified==='unverified') list=list.filter(s=>!s.is_verified);
   list.sort((a,b)=>{ const featuredDelta=Number(isFeaturedActive(b))-Number(isFeaturedActive(a)); if(featuredDelta) return featuredDelta; return sort==='rating'?avgRating(b)-avgRating(a):sort==='reviews'?b.reviews.length-a.reviews.length:sort==='az'?a.business_name.localeCompare(b.business_name):sort==='nearest'&&userCoords?(kmBetween(userCoords,{lat:a.lat,lng:a.lng})??99999)-(kmBetween(userCoords,{lat:b.lat,lng:b.lng})??99999):0; });
   renderSuppliers(list);
 }
@@ -120,8 +124,11 @@ function renderSupplierContacts(s){
   }
   if(!contacts.length) return '<div class="supplier-detail-empty">No contact options listed yet.</div>';
   return `<div class="supplier-contact-cards">${contacts.map(c=>{
-    const label=contactPlatformLabel(c), href=contactHref(c), value=esc(c.value||'');
-    return `<div class="supplier-contact-card"><div><span>${esc(label)}</span><strong>${value}</strong></div>${href?`<a class="btn secondary contact-open-btn" ${c.platform==='mobile'||c.platform==='email'?'': 'target="_blank" rel="noopener"'} href="${esc(href)}">${c.platform==='mobile'?'Call':c.platform==='email'?'Email':'Open'}</a>`:`<button type="button" class="btn secondary contact-copy-btn" data-copy-contact="${value}">Copy</button>`}</div>`;
+    const label=contactPlatformLabel(c), href=contactHref(c), rawValue=String(c.value||'').trim(), value=esc(rawValue);
+    const isUrl=/^https?:\/\//i.test(rawValue);
+    const showValue=!isUrl;
+    const detail=showValue?`<strong>${value}</strong>`:'';
+    return `<div class="supplier-contact-card"><div><span>${esc(label)}</span>${detail}</div>${href?`<a class="btn secondary contact-open-btn" ${c.platform==='mobile'||c.platform==='email'?'': 'target="_blank" rel="noopener"'} href="${esc(href)}">${c.platform==='mobile'?'Call':c.platform==='email'?'Email':'Open'}</a>`:`<button type="button" class="btn secondary contact-copy-btn" data-copy-contact="${value}">Copy</button>`}</div>`;
   }).join('')}</div>`;
 }
 function renderSupplierReviews(s){
@@ -212,7 +219,18 @@ $('publicReviewForm').addEventListener('submit',async e=>{
   finally{ btn.disabled=false; btn.textContent='Submit Review'; }
 });
 
-$('searchBtn').addEventListener('click',runSearch); $('serviceSearch').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();}); $('locationSearch').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();}); ['categoryFilter','ratingFilter','sortFilter'].forEach(id=>$(id).addEventListener('change',runSearch));
+$('searchBtn').addEventListener('click',runSearch); $('serviceSearch').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();}); $('locationSearch').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();}); ['categoryFilter','ratingFilter','featuredFilter','verifiedFilter','sortFilter'].forEach(id=>$(id).addEventListener('change',runSearch));
+
+function openContactUsModal(){
+  $('contactUsModal')?.classList.remove('hidden');
+  setTimeout(()=>$('ticketType')?.focus(),0);
+}
+function closeContactUsModal(){
+  $('contactUsModal')?.classList.add('hidden');
+}
+$('contactUsNav')?.addEventListener('click',e=>{e.preventDefault();openContactUsModal();});
+$('closeContactUsModalBtn')?.addEventListener('click',closeContactUsModal);
+document.addEventListener('keydown',e=>{if(e.key==='Escape' && !$('contactUsModal')?.classList.contains('hidden')) closeContactUsModal();});
 
 $('contactTicketForm')?.addEventListener('submit',async e=>{
   e.preventDefault(); const btn=$('submitTicketBtn'); btn.disabled=true; btn.textContent='Submitting…';
@@ -220,7 +238,7 @@ $('contactTicketForm')?.addEventListener('submit',async e=>{
     const payload={request_type:$('ticketType').value,name:$('ticketName').value.trim(),business_name:$('ticketBusinessName').value.trim()||null,email:$('ticketEmail').value.trim()||null,contact_number:$('ticketContact').value.trim()||null,message:$('ticketMessage').value.trim(),status:'pending'};
     if(!payload.request_type||!payload.name||!payload.message) throw new Error('Please complete the request type, your name, and message.');
     const {error}=await db.from('contact_tickets').insert(payload); if(error) throw error;
-    e.target.reset(); toast('Ticket submitted successfully. The admin can now review your request.','success');
+    e.target.reset(); closeContactUsModal(); toast('Ticket submitted successfully. The admin can now review your request.','success');
   }catch(err){console.error(err);toast(`Ticket could not be submitted: ${err.message||err}`,'error');}
   finally{btn.disabled=false;btn.textContent='Submit Ticket';}
 });
