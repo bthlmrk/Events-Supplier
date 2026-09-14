@@ -24,7 +24,7 @@
       <div class="systems-hero-copy">
         <p class="eyebrow">Tools built for event suppliers</p>
         <h1>Run your event business with a system made for the way you work.</h1>
-        <p>Organize bookings, clients, payments, equipment and reports in one professional workspace. Start with our Photobooth Booking System, with more supplier systems coming soon.</p>
+        <p>Organize bookings, clients, payments, equipment and reports in one professional workspace. Photobooth, Photography, Lights & Sounds, and Salon Management Systems are now available, with more supplier systems coming soon.</p>
         <div class="systems-hero-actions">
           <button class="btn primary" type="button" data-avail-system="Photobooth Booking System">Avail Photobooth System</button>
           <a class="btn secondary" href="#photobooth-system">Explore Features</a>
@@ -88,15 +88,48 @@
       </div>
     </section>
 
+    <section class="systems-section systems-available-more">
+      <div class="section-head">
+        <div><p class="eyebrow">Also available now</p><h2>More ready-to-use business systems</h2><p class="helper">Choose the system that matches your business. Each one can be customized to fit your actual workflow.</p></div>
+      </div>
+      <div class="available-systems-grid">
+        <article class="available-system-card">
+          <div class="available-system-top"><span class="availability-mini">AVAILABLE NOW</span><strong>PHOTO</strong></div>
+          <h3>Photography Management System</h3>
+          <p>Manage inquiries, bookings, client records, shoot schedules, packages, payments, project progress and business reports in one organized workspace.</p>
+          <ul><li>Client & booking management</li><li>Shoot schedules & packages</li><li>Payments & balances</li><li>Project status & reports</li></ul>
+          <button class="btn primary" type="button" data-avail-system="Photography Management System">Avail This System</button>
+        </article>
+        <article class="available-system-card">
+          <div class="available-system-top"><span class="availability-mini">AVAILABLE NOW</span><strong>AUDIO</strong></div>
+          <h3>Lights & Sounds Management System</h3>
+          <p>Built for event production businesses that need better control of bookings, equipment, dispatch, returns, staff assignments, maintenance and event operations.</p>
+          <ul><li>Booking & event operations</li><li>Equipment inventory</li><li>Dispatch / return monitoring</li><li>Staff & maintenance tracking</li></ul>
+          <button class="btn primary" type="button" data-avail-system="Lights & Sounds Management System">Avail This System</button>
+        </article>
+        <article class="available-system-card">
+          <div class="available-system-top"><span class="availability-mini">AVAILABLE NOW</span><strong>SALON</strong></div>
+          <h3>Salon Management System</h3>
+          <p>Organize appointments, clients, services, payments, expenses, inventory and salon reports through a simple day-to-day management workflow.</p>
+          <ul><li>Appointments & client history</li><li>Services & staff scheduling</li><li>Payments & expenses</li><li>Products, inventory & reports</li></ul>
+          <button class="btn primary" type="button" data-avail-system="Salon Management System">Avail This System</button>
+        </article>
+      </div>
+    </section>
+
     <section class="systems-section systems-coming">
       <div class="section-head">
         <div><p class="eyebrow">In development</p><h2>More supplier systems are coming</h2><p class="helper">These products are planned for future releases.</p></div>
       </div>
       <div class="coming-grid">
-        <article class="coming-card"><span>COMING SOON</span><h3>Lights & Sounds Management System</h3><p>Equipment, dispatch, staff, bookings and event operations.</p></article>
-        <article class="coming-card"><span>COMING SOON</span><h3>Catering Management System</h3><p>Bookings, menus, packages, clients and event requirements.</p></article>
-        <article class="coming-card"><span>COMING SOON</span><h3>Coffee Booth System</h3><p>Event reservations, packages, inventory and payment tracking.</p></article>
-        <article class="coming-card"><span>COMING SOON</span><h3>Mobile Bar System</h3><p>Event bookings, packages, stocks, expenses and client records.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Perfume Bar Booking System</h3><p>Event reservations, scent packages, bottle and material inventory, client requests, payments and event setup tracking.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Catering Management System</h3><p>Bookings, menus, packages, guest counts, event requirements, payments, expenses and kitchen/event preparation records.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Coffee Booth Management System</h3><p>Event reservations, drink packages, supplies, barista assignments, inventory, payments and event booth operations.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Mobile Bar Management System</h3><p>Bookings, beverage packages, stocks, bartenders, event requirements, expenses, payments and client records.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Event Host / Emcee Booking System</h3><p>Client inquiries, event schedules, packages, scripts, program notes, payments and availability management.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Makeup Artist Booking System</h3><p>Appointments, event dates, client profiles, packages, team assignments, deposits, balances and service history.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Event Rentals Management System</h3><p>Rental bookings, chairs, tables, tents and equipment inventory, dispatch, returns, damages and payment tracking.</p></article>
+        <article class="coming-card"><span>COMING SOON</span><h3>Souvenir & Giveaways System</h3><p>Orders, item customization, quantities, production status, inventory, payments and delivery monitoring.</p></article>
       </div>
     </section>
   </main>
@@ -110,7 +143,12 @@
       <h2 id="systemsContactTitle">Avail a Supplier System</h2>
       <p class="helper">Send your inquiry to the admin. You can ask for a demo, setup details, customization or availability.</p>
       <form id="systemsInquiryForm" class="form-grid">
-        <label>System<select id="systemProduct" required><option value="Photobooth Booking System">Photobooth Booking System</option></select></label>
+        <label>System<select id="systemProduct" required>
+          <option value="Photobooth Booking System">Photobooth Booking System</option>
+          <option value="Photography Management System">Photography Management System</option>
+          <option value="Lights & Sounds Management System">Lights & Sounds Management System</option>
+          <option value="Salon Management System">Salon Management System</option>
+        </select></label>
         <label>Your Name<input id="systemName" maxlength="100" required /></label>
         <label>Business Name<input id="systemBusiness" maxlength="150" placeholder="Optional" /></label>
         <label>Email<input id="systemEmail" type="email" maxlength="160" /></label>
