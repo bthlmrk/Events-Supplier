@@ -266,7 +266,7 @@ async function loadTickets(){
   if(error){ $('ticketTableBody').innerHTML=`<tr><td colspan="7" class="helper">Tickets could not be loaded: ${esc(error.message)}</td></tr>`; return; }
   tickets=data||[]; renderTicketsTable();
 }
-function ticketTypeLabel(v){return ({update_business:'Update Business',add_business:'Add Business',featured_subscription:'Featured Subscription',other:'Other'})[v]||v||'—';}
+function ticketTypeLabel(v){return ({update_business:'Update Business',add_business:'Add Business',featured_subscription:'Featured Subscription',supplier_system:'Supplier System Inquiry',other:'Other'})[v]||v||'—';}
 function renderTicketsTable(){
   const body=$('ticketTableBody'); if(!body) return; const q=($('ticketSearch')?.value||'').trim().toLowerCase(), st=$('ticketStatusFilter')?.value||'all';
   const rows=tickets.filter(t=>(st==='all'||t.status===st)&&(!q||[t.request_type,t.name,t.business_name,t.email,t.contact_number,t.message].join(' ').toLowerCase().includes(q)));
