@@ -149,9 +149,14 @@
         <label>Address<input id="businessAddress" /></label>
         <label>City / Municipality<input id="businessCity" /></label>
         <label>Province<input id="businessProvince" /></label>
-        <label>Contact Number<input id="businessContact" /></label>
-        <label>Facebook Page<input id="businessFacebook" type="url" /></label>
-        <label>Messenger Link<input id="businessMessenger" type="url" /></label>
+        <div class="full contact-methods-block">
+          <div class="contact-methods-head">
+            <div><strong>Supplier Contact Options</strong><span>Select one or more platforms clients can use to contact this supplier.</span></div>
+            <button type="button" id="addContactMethodBtn" class="btn secondary small-btn">+ Add Contact</button>
+          </div>
+          <div id="contactMethodsEditor" class="contact-methods-editor"></div>
+          <p class="helper">Examples: Facebook Page URL, Messenger link, mobile number, Viber, WeChat ID, WhatsApp, Telegram, email, website, or a custom platform.</p>
+        </div>
         <div class="full asset-settings-block">
           <div class="asset-settings-head">
             <div><strong>GitHub Asset Folder</strong><span>Supplier images are stored in your repository, not Supabase Storage.</span></div>

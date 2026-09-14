@@ -41,7 +41,7 @@ function toast(message,type='success'){
 async function loadData(){
   $('resultSummary').textContent='Loading suppliers from Supabase…';
   const [{data:sData,error:sErr},{data:cData,error:cErr},{data:settingData}] = await Promise.all([
-    db.from('suppliers').select(`*, supplier_categories(categories(id,name)), supplier_services(services(id,name)), supplier_gallery(id,image_url,sort_order,created_at), supplier_service_areas(id,province,city), reviews(id,rating,status,reviewer_name,message,created_at)`).eq('is_active',true).order('business_name'),
+    db.from('suppliers').select(`*, supplier_categories(categories(id,name)), supplier_services(services(id,name)), supplier_gallery(id,image_url,sort_order,created_at), supplier_service_areas(id,province,city), supplier_contacts(id,platform,label,value,sort_order,is_active), reviews(id,rating,status,reviewer_name,message,created_at)`).eq('is_active',true).order('business_name'),
     db.from('categories').select('*').eq('is_active',true).order('name'),
     db.from('app_settings').select('*').eq('setting_key','owner_messenger_url').maybeSingle()
   ]);
@@ -58,6 +58,7 @@ async function loadData(){
     reviews:(s.reviews||[]).filter(r=>r.status==='approved').sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)),
     gallery:(s.supplier_gallery||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)),
     serviceAreas:(s.supplier_service_areas||[]),
+    contacts:(s.supplier_contacts||[]).filter(x=>x.is_active!==false).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)),
     lat:s.latitude, lng:s.longitude
   }));
   renderCategories(); renderSuppliers(suppliers);
@@ -92,9 +93,36 @@ function runSearch(){
   renderSuppliers(list);
 }
 
-function contactLink(url,label,kind='secondary'){
-  if(!url) return '';
-  return `<a class="btn ${kind}" target="_blank" rel="noopener" href="${esc(url)}">${esc(label)}</a>`;
+function contactPlatformLabel(c){
+  const map={facebook:'Facebook',messenger:'Messenger',mobile:'Mobile Number',viber:'Viber',wechat:'WeChat',whatsapp:'WhatsApp',telegram:'Telegram',email:'Email',website:'Website',custom:'Other'};
+  return c?.label || map[c?.platform] || c?.platform || 'Contact';
+}
+function digits(v=''){ return String(v).replace(/[^+\d]/g,''); }
+function contactHref(c){
+  const v=String(c?.value||'').trim(); if(!v) return '';
+  if(/^https?:\/\//i.test(v) || /^(tel:|mailto:|viber:|tg:|weixin:)/i.test(v)) return v;
+  switch(c.platform){
+    case 'mobile': return `tel:${digits(v)}`;
+    case 'email': return `mailto:${v}`;
+    case 'whatsapp': return `https://wa.me/${digits(v).replace(/^\+/,'')}`;
+    case 'telegram': return `https://t.me/${v.replace(/^@/,'')}`;
+    case 'viber': return `viber://chat?number=${encodeURIComponent(digits(v))}`;
+    case 'facebook': case 'messenger': case 'website': return /^www\./i.test(v)?`https://${v}`:'';
+    default: return '';
+  }
+}
+function renderSupplierContacts(s){
+  let contacts=(s.contacts||[]).slice();
+  if(!contacts.length){
+    if(s.facebook_url) contacts.push({platform:'facebook',value:s.facebook_url});
+    if(s.messenger_url) contacts.push({platform:'messenger',value:s.messenger_url});
+    if(s.contact_number) contacts.push({platform:'mobile',value:s.contact_number});
+  }
+  if(!contacts.length) return '<div class="supplier-detail-empty">No contact options listed yet.</div>';
+  return `<div class="supplier-contact-cards">${contacts.map(c=>{
+    const label=contactPlatformLabel(c), href=contactHref(c), value=esc(c.value||'');
+    return `<div class="supplier-contact-card"><div><span>${esc(label)}</span><strong>${value}</strong></div>${href?`<a class="btn secondary contact-open-btn" ${c.platform==='mobile'||c.platform==='email'?'': 'target="_blank" rel="noopener"'} href="${esc(href)}">${c.platform==='mobile'?'Call':c.platform==='email'?'Email':'Open'}</a>`:`<button type="button" class="btn secondary contact-copy-btn" data-copy-contact="${value}">Copy</button>`}</div>`;
+  }).join('')}</div>`;
 }
 function renderSupplierReviews(s){
   const reviews=(s.reviews||[]).slice(0,3);
@@ -122,14 +150,10 @@ function openSupplierModal(id){
       ${s.description?`<p class="supplier-detail-description">${esc(s.description)}</p>`:''}
       <section class="supplier-detail-section"><h3>Services</h3><div class="tags">${(s.services||[]).length?(s.services||[]).map(x=>`<span>${esc(x)}</span>`).join(''):'<span>No service tags listed.</span>'}</div></section>
       ${areas.length?`<section class="supplier-detail-section"><h3>Service Areas</h3><p>${areas.map(esc).join(' · ')}</p></section>`:''}
-      <section class="supplier-detail-section"><h3>Contact Supplier</h3><div class="supplier-contact-list">
-        ${s.contact_number?`<div><span>Contact Number</span><strong>${esc(s.contact_number)}</strong></div>`:''}
-        ${s.address?`<div><span>Address</span><strong>${esc(s.address)}</strong></div>`:''}
-      </div><div class="supplier-contact-actions">
-        ${s.facebook_url?contactLink(s.facebook_url,'Facebook Page','secondary'):''}
-        ${s.messenger_url?contactLink(s.messenger_url,'Messenger','primary'):''}
-        ${s.contact_number?`<a class="btn secondary" href="tel:${esc(String(s.contact_number).replace(/[^+\d]/g,''))}">Call</a>`:''}
-      </div></section>
+      <section class="supplier-detail-section"><h3>Contact Supplier</h3>
+        ${s.address?`<div class="supplier-contact-address"><span>Address</span><strong>${esc(s.address)}</strong></div>`:''}
+        ${renderSupplierContacts(s)}
+      </section>
       <section class="supplier-detail-section"><div class="supplier-section-heading"><h3>Gallery</h3><span>${galleries.length?`${galleries.length} photo${galleries.length===1?'':'s'}`:'No photos yet'}</span></div>
         ${galleries.length?`<div class="supplier-detail-gallery gallery-count-${Math.min(galleries.length,3)}">${galleries.map((url,i)=>`<button type="button" class="gallery-thumb" data-gallery-url="${esc(url)}" aria-label="Open gallery photo ${i+1}"><img src="${esc(url)}" alt="${esc(s.business_name)} gallery ${i+1}" onerror="this.closest('.gallery-thumb').style.display='none'"></button>`).join('')}</div>`:'<div class="supplier-detail-empty">Gallery photos have not been added yet.</div>'}
       </section>
@@ -139,6 +163,7 @@ function openSupplierModal(id){
   document.body.classList.add('modal-open');
   $('supplierModal').querySelector('[data-review-from-detail]')?.addEventListener('click',e=>{const supplierId=e.currentTarget.dataset.reviewFromDetail; closeSupplierModal(); openReviewModal(supplierId);});
   $('supplierModal').querySelectorAll('[data-gallery-url]').forEach(btn=>btn.addEventListener('click',()=>openGalleryLightbox(btn.dataset.galleryUrl,s.business_name)));
+  $('supplierModal').querySelectorAll('[data-copy-contact]').forEach(btn=>btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(btn.dataset.copyContact||''); toast('Contact detail copied.','success');}catch{toast('Could not copy contact detail.','error');}}));
 }
 function closeSupplierModal(){ $('supplierModal').classList.add('hidden'); activeSupplier=null; document.body.classList.remove('modal-open'); }
 function openGalleryLightbox(url,name){ $('galleryLightboxImage').src=url; $('galleryLightboxImage').alt=`${name||'Supplier'} gallery photo`; $('galleryLightbox').classList.remove('hidden'); }

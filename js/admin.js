@@ -13,6 +13,7 @@ let tickets = [];
 let selectedServiceIds = new Set();
 let supplierMap = null;
 let supplierMarker = null;
+let editingContacts = [];
 
 function toast(message, type='info') {
   const container = $('adminToastContainer');
@@ -34,6 +35,34 @@ function toast(message, type='info') {
 
 function esc(v='') { return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function slugify(v='') { return v.toLowerCase().trim().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+
+const CONTACT_PLATFORMS = [
+  ['facebook','Facebook'],['messenger','Messenger'],['mobile','Mobile Number'],['viber','Viber'],
+  ['wechat','WeChat'],['whatsapp','WhatsApp'],['telegram','Telegram'],['email','Email'],['website','Website'],['custom','Other / Custom']
+];
+function blankContact(){ return {platform:'facebook',label:'',value:''}; }
+function renderContactMethodsEditor(){
+  const box=$('contactMethodsEditor'); if(!box) return;
+  if(!editingContacts.length) editingContacts=[blankContact()];
+  box.innerHTML=editingContacts.map((c,i)=>`<div class="contact-method-row" data-contact-row="${i}">
+    <select class="contact-platform" data-contact-platform="${i}">${CONTACT_PLATFORMS.map(([v,l])=>`<option value="${v}" ${c.platform===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input class="contact-value" data-contact-value="${i}" value="${esc(c.value||'')}" placeholder="${c.platform==='mobile'?'e.g. 0917 123 4567':c.platform==='email'?'name@example.com':c.platform==='wechat'?'WeChat ID':'URL, username, number or contact detail'}" />
+    <input class="contact-custom-label ${c.platform==='custom'?'':'hidden'}" data-contact-label="${i}" value="${esc(c.label||'')}" placeholder="Platform name" />
+    <button type="button" class="table-btn danger contact-remove" data-contact-remove="${i}">Remove</button>
+  </div>`).join('');
+  box.querySelectorAll('[data-contact-platform]').forEach(el=>el.addEventListener('change',()=>{const i=Number(el.dataset.contactPlatform); editingContacts[i].platform=el.value; if(el.value!=='custom') editingContacts[i].label=''; renderContactMethodsEditor();}));
+  box.querySelectorAll('[data-contact-value]').forEach(el=>el.addEventListener('input',()=>{editingContacts[Number(el.dataset.contactValue)].value=el.value;}));
+  box.querySelectorAll('[data-contact-label]').forEach(el=>el.addEventListener('input',()=>{editingContacts[Number(el.dataset.contactLabel)].label=el.value;}));
+  box.querySelectorAll('[data-contact-remove]').forEach(el=>el.addEventListener('click',()=>{editingContacts.splice(Number(el.dataset.contactRemove),1); renderContactMethodsEditor();}));
+}
+function legacyContacts(data){
+  const out=[];
+  if(data?.facebook_url) out.push({platform:'facebook',label:'',value:data.facebook_url});
+  if(data?.messenger_url) out.push({platform:'messenger',label:'',value:data.messenger_url});
+  if(data?.contact_number) out.push({platform:'mobile',label:'',value:data.contact_number});
+  return out;
+}
+
 
 function adminAssetUrl(supplier, file){
   const value=String(file||'').trim();
@@ -178,6 +207,7 @@ async function loadSuppliers() {
     *,
     supplier_categories(category_id, categories(id,name)),
     supplier_services(service_id, services(id,name)),
+    supplier_contacts(id,platform,label,value,sort_order,is_active),
     reviews(id,rating,status)
   `).order('created_at', { ascending: false });
   if (error) { toast(`Suppliers load failed: ${error.message}`, 'error'); return; }
@@ -186,6 +216,7 @@ async function loadSuppliers() {
     category: s.supplier_categories?.[0]?.categories?.name || '',
     category_id: s.supplier_categories?.[0]?.categories?.id || null,
     services_list: (s.supplier_services || []).map(x => x.services).filter(Boolean),
+    contacts_list: (s.supplier_contacts || []).filter(x=>x.is_active!==false).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)),
     approved_reviews: (s.reviews || []).filter(r => r.status === 'approved')
   }));
   renderSupplierTable();
@@ -476,9 +507,9 @@ function openModal(data=null) {
   $('businessAddress').value = data?.address || '';
   $('businessCity').value = data?.city || '';
   $('businessProvince').value = data?.province || '';
-  $('businessContact').value = data?.contact_number || '';
-  $('businessFacebook').value = data?.facebook_url || '';
-  $('businessMessenger').value = data?.messenger_url || '';
+  editingContacts = (data?.contacts_list?.length ? data.contacts_list.map(x=>({platform:x.platform||'custom',label:x.label||'',value:x.value||''})) : legacyContacts(data));
+  if (!editingContacts.length) editingContacts = [blankContact()];
+  renderContactMethodsEditor();
   $('businessAssetFolder').value = data?.asset_folder || (data?.business_name ? slugify(data.business_name) : '');
   $('businessCoverImage').value = data?.cover_image || 'cover.jpg';
   $('businessLogoImage').value = data?.logo_image || 'logo.png';
@@ -512,6 +543,8 @@ function closeModal(){
   if ($('businessLogoImage')) $('businessLogoImage').value='logo.png';
   updateBusinessAssetPreview();
   selectedServiceIds.clear();
+  editingContacts = [];
+  renderContactMethodsEditor();
   renderSelectedServiceChips();
   renderServicePicker();
 }
@@ -545,6 +578,7 @@ $('gallerySupplier')?.addEventListener('change',()=>{
 });
 $('galleryImageUrl')?.addEventListener('input',updateGalleryPathPreview);
 
+$('addContactMethodBtn')?.addEventListener('click',()=>{ editingContacts.push(blankContact()); renderContactMethodsEditor(); });
 $('addSupplierBtn').addEventListener('click', () => openModal());
 $('closeModalBtn').addEventListener('click', closeModal);
 $('cancelSupplierBtn').addEventListener('click', closeModal);
@@ -564,9 +598,9 @@ $('supplierForm').addEventListener('submit', async (e) => {
       province: $('businessProvince').value.trim() || null,
       latitude: $('businessLat').value ? Number($('businessLat').value) : null,
       longitude: $('businessLng').value ? Number($('businessLng').value) : null,
-      contact_number: $('businessContact').value.trim() || null,
-      facebook_url: $('businessFacebook').value.trim() || null,
-      messenger_url: $('businessMessenger').value.trim() || null,
+      contact_number: null,
+      facebook_url: null,
+      messenger_url: null,
       asset_folder: $('businessAssetFolder').value.trim() || slugify($('businessName').value),
       cover_image: $('businessCoverImage').value.trim() || 'cover.jpg',
       logo_image: $('businessLogoImage').value.trim() || 'logo.png',
@@ -599,6 +633,17 @@ $('supplierForm').addEventListener('submit', async (e) => {
       const rows = [...selectedServiceIds].map(service_id => ({ supplier_id: supplierId, service_id }));
       const { error } = await db.from('supplier_services').insert(rows);
       if (error) throw error;
+    }
+
+    const cleanedContacts = editingContacts.map((c,i)=>({
+      supplier_id: supplierId, platform: c.platform || 'custom', label: c.platform==='custom' ? (c.label||'Other').trim() : null,
+      value: (c.value||'').trim(), sort_order: i+1, is_active: true
+    })).filter(c=>c.value);
+    const { error: contactDeleteError } = await db.from('supplier_contacts').delete().eq('supplier_id', supplierId);
+    if (contactDeleteError) throw contactDeleteError;
+    if (cleanedContacts.length) {
+      const { error: contactInsertError } = await db.from('supplier_contacts').insert(cleanedContacts);
+      if (contactInsertError) throw contactInsertError;
     }
 
     await writeAudit(isEditing ? 'UPDATE' : 'ADD', 'suppliers', supplierId, { business_name: supplierData.business_name });
