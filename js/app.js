@@ -17,6 +17,11 @@ function avgRating(s){ const rs=s.reviews||[]; return rs.length?rs.reduce((a,r)=
 function isFeaturedActive(s){ if(!s?.is_featured) return false; if((s.featured_plan||'')==='lifetime') return true; if(!s.featured_until) return !!s.is_featured; return new Date(s.featured_until).getTime()>Date.now(); }
 function stars(n=0){ return '★'.repeat(Math.max(0,Math.min(5,Number(n)||0))) + '☆'.repeat(Math.max(0,5-(Number(n)||0))); }
 function formatDate(v){ if(!v) return ''; const d=new Date(v); return Number.isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
+function renderDescription(v){
+  const text=String(v??'').replace(/\r\n?/g,'\n').trim();
+  if(!text) return '';
+  return esc(text);
+}
 
 function assetUrl(s, file){
   const value=String(file||'').trim();
@@ -77,7 +82,7 @@ function renderSuppliers(list){
     const cover=assetUrl(s,s.cover_image||'cover.jpg');
     const logo=assetUrl(s,s.logo_image||'logo.png');
     const initials=esc((s.business_name||'ES').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'ES');
-    div.innerHTML=`<div class="supplier-cover"><div class="supplier-cover-placeholder">${esc((s.business_name||'ES').slice(0,2).toUpperCase())}</div>${cover?`<img class="supplier-cover-img" src="${esc(cover)}" alt="${esc(s.business_name)} cover" loading="lazy" onerror="this.style.display='none'">`:''}<div class="badge-row">${s.is_verified?'<span class="badge verified">Verified</span>':''}${isFeaturedActive(s)?'<span class="badge featured">Featured</span>':''}</div></div><div class="supplier-body"><div class="supplier-title-row"><div class="supplier-title-main"><div class="supplier-logo-wrap"><div class="supplier-logo-placeholder">${initials}</div>${logo?`<img class="supplier-logo" src="${esc(logo)}" alt="${esc(s.business_name)} logo" loading="lazy" onerror="this.style.display='none'">`:''}</div><div class="supplier-title-copy"><h3>${esc(s.business_name)}</h3><p class="supplier-location">${esc([s.city,s.province].filter(Boolean).join(', ')||s.address||'Location not set')}${d!==null?` · ${d.toFixed(1)} km away`:''}</p></div></div><span class="rating">★ ${rating.toFixed(1)}</span></div><div class="tags">${(s.services||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div>${s.description?`<p class="helper">${esc(s.description)}</p>`:''}<div class="review-summary-btn review-summary-static"><span class="review-stars">${stars(Math.round(rating))}</span><span>${s.reviews.length} review${s.reviews.length===1?'':'s'}</span></div><div class="card-actions"><button class="btn primary view-supplier-btn" type="button" data-view-supplier="${esc(s.id)}">View Supplier</button></div></div>`;
+    div.innerHTML=`<div class="supplier-cover"><div class="supplier-cover-placeholder">${esc((s.business_name||'ES').slice(0,2).toUpperCase())}</div>${cover?`<img class="supplier-cover-img" src="${esc(cover)}" alt="${esc(s.business_name)} cover" loading="lazy" onerror="this.style.display='none'">`:''}<div class="badge-row">${s.is_verified?'<span class="badge verified">Verified</span>':''}${isFeaturedActive(s)?'<span class="badge featured">Featured</span>':''}</div></div><div class="supplier-body"><div class="supplier-title-row"><div class="supplier-title-main"><div class="supplier-logo-wrap"><div class="supplier-logo-placeholder">${initials}</div>${logo?`<img class="supplier-logo" src="${esc(logo)}" alt="${esc(s.business_name)} logo" loading="lazy" onerror="this.style.display='none'">`:''}</div><div class="supplier-title-copy"><h3>${esc(s.business_name)}</h3><p class="supplier-location">${esc([s.city,s.province].filter(Boolean).join(', ')||s.address||'Location not set')}${d!==null?` · ${d.toFixed(1)} km away`:''}</p></div></div><span class="rating">★ ${rating.toFixed(1)}</span></div><div class="tags">${(s.services||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div><div class="review-summary-btn review-summary-static"><span class="review-stars">${stars(Math.round(rating))}</span><span>${s.reviews.length} review${s.reviews.length===1?'':'s'}</span></div><div class="card-actions"><button class="btn primary view-supplier-btn" type="button" data-view-supplier="${esc(s.id)}">View Supplier</button></div></div>`;
     $('supplierGrid').appendChild(div);
   });
   document.querySelectorAll('[data-view-supplier]').forEach(btn=>btn.addEventListener('click',()=>openSupplierModal(btn.dataset.viewSupplier)));
@@ -154,7 +159,7 @@ function openSupplierModal(id){
         <div class="supplier-detail-logo-wrap"><div class="supplier-logo-placeholder">${initials}</div>${logo?`<img class="supplier-logo" src="${esc(logo)}" alt="${esc(s.business_name)} logo" onerror="this.style.display='none'">`:''}</div>
         <div class="supplier-detail-title"><h2>${esc(s.business_name)}</h2><p>${esc(location)}</p><div class="supplier-detail-rating"><span>★ ${rating.toFixed(1)}</span><span>${s.reviews.length} review${s.reviews.length===1?'':'s'}</span></div></div>
       </div>
-      ${s.description?`<p class="supplier-detail-description">${esc(s.description)}</p>`:''}
+      ${s.description?`<div class="supplier-detail-description">${renderDescription(s.description)}</div>`:''}
       <section class="supplier-detail-section"><h3>Services</h3><div class="tags">${(s.services||[]).length?(s.services||[]).map(x=>`<span>${esc(x)}</span>`).join(''):'<span>No service tags listed.</span>'}</div></section>
       ${areas.length?`<section class="supplier-detail-section"><h3>Service Areas</h3><p>${areas.map(esc).join(' · ')}</p></section>`:''}
       <section class="supplier-detail-section"><h3>Contact Supplier</h3>
@@ -232,15 +237,61 @@ $('contactUsNav')?.addEventListener('click',e=>{e.preventDefault();openContactUs
 $('closeContactUsModalBtn')?.addEventListener('click',closeContactUsModal);
 document.addEventListener('keydown',e=>{if(e.key==='Escape' && !$('contactUsModal')?.classList.contains('hidden')) closeContactUsModal();});
 
+function updateContactTicketFields(){
+  const isAddBusiness = $('ticketType')?.value === 'add_business';
+  $('genericTicketFields')?.classList.toggle('hidden', isAddBusiness);
+  $('addBusinessFields')?.classList.toggle('hidden', !isAddBusiness);
+  $('contactTicketForm')?.classList.toggle('add-business-mode', isAddBusiness);
+  $('contactUsModal')?.classList.toggle('add-business-mode', isAddBusiness);
+  $('ticketName')?.toggleAttribute('required', !isAddBusiness);
+  $('ticketMessage')?.toggleAttribute('required', !isAddBusiness);
+  $('ticketAddBusinessName')?.toggleAttribute('required', isAddBusiness);
+  $('ticketContactPerson')?.toggleAttribute('required', isAddBusiness);
+  $('ticketAddEmail')?.toggleAttribute('required', isAddBusiness);
+  $('ticketCategory')?.toggleAttribute('required', isAddBusiness);
+  $('ticketDescription')?.toggleAttribute('required', isAddBusiness);
+}
+
+$('ticketType')?.addEventListener('change', updateContactTicketFields);
+
 $('contactTicketForm')?.addEventListener('submit',async e=>{
   e.preventDefault(); const btn=$('submitTicketBtn'); btn.disabled=true; btn.textContent='Submitting…';
   try{
-    const payload={request_type:$('ticketType').value,name:$('ticketName').value.trim(),business_name:$('ticketBusinessName').value.trim()||null,email:$('ticketEmail').value.trim()||null,contact_number:$('ticketContact').value.trim()||null,message:$('ticketMessage').value.trim(),status:'pending'};
-    if(!payload.request_type||!payload.name||!payload.message) throw new Error('Please complete the request type, your name, and message.');
+    const requestType=$('ticketType').value;
+    const isAddBusiness=requestType==='add_business';
+    const payload=isAddBusiness ? {
+      request_type:requestType,
+      name:$('ticketContactPerson').value.trim(),
+      business_name:$('ticketAddBusinessName').value.trim()||null,
+      contact_person:$('ticketContactPerson').value.trim()||null,
+      contact_number:$('ticketAddContactNumber').value.trim()||null,
+      email:$('ticketAddEmail').value.trim()||null,
+      category:$('ticketCategory').value.trim()||null,
+      address:$('ticketAddress').value.trim()||null,
+      city:$('ticketCity').value.trim()||null,
+      province:$('ticketProvince').value.trim()||null,
+      message:$('ticketDescription').value.trim(),
+      status:'pending'
+    } : {
+      request_type:requestType,
+      name:$('ticketName').value.trim(),
+      business_name:$('ticketBusinessName').value.trim()||null,
+      email:$('ticketEmail').value.trim()||null,
+      contact_number:$('ticketContact').value.trim()||null,
+      message:$('ticketMessage').value.trim(),
+      status:'pending'
+    };
+    if(isAddBusiness){
+      if(!payload.request_type||!payload.business_name||!payload.contact_person||!payload.contact_number||!payload.email||!payload.category||!payload.message) throw new Error('Please complete the business name, contact person, contact number, email, category, and description.');
+    }else if(!payload.request_type||!payload.name||!payload.message){
+      throw new Error('Please complete the request type, your name, and message.');
+    }
     const {error}=await db.from('contact_tickets').insert(payload); if(error) throw error;
-    e.target.reset(); closeContactUsModal(); toast('Ticket submitted successfully. The admin can now review your request.','success');
+    e.target.reset(); updateContactTicketFields(); closeContactUsModal(); toast('Ticket submitted successfully. The admin can now review your request.','success');
   }catch(err){console.error(err);toast(`Ticket could not be submitted: ${err.message||err}`,'error');}
   finally{btn.disabled=false;btn.textContent='Submit Ticket';}
 });
+
+updateContactTicketFields();
 $('nearMeBtn').addEventListener('click',()=>{if(!navigator.geolocation){$('locationStatus').textContent='Geolocation is not supported by this browser.';return;}$('locationStatus').textContent='Requesting your location…';navigator.geolocation.getCurrentPosition(pos=>{userCoords={lat:pos.coords.latitude,lng:pos.coords.longitude};$('locationStatus').textContent='Location enabled. Results are sorted by distance.';$('sortFilter').value='nearest';runSearch();},()=>{$('locationStatus').textContent='Location permission was not granted. You can type the event city instead.';});});
 loadData();

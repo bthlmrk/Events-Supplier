@@ -14,6 +14,7 @@ let selectedServiceIds = new Set();
 let supplierMap = null;
 let supplierMarker = null;
 let editingContacts = [];
+let activeTicketIdForSupplier = null;
 
 function toast(message, type='info') {
   const container = $('adminToastContainer');
@@ -269,10 +270,67 @@ async function loadTickets(){
 function ticketTypeLabel(v){return ({update_business:'Update Business',add_business:'Add Business',featured_subscription:'Featured Subscription',supplier_system:'Supplier System Inquiry',other:'Other'})[v]||v||'—';}
 function renderTicketsTable(){
   const body=$('ticketTableBody'); if(!body) return; const q=($('ticketSearch')?.value||'').trim().toLowerCase(), st=$('ticketStatusFilter')?.value||'all';
-  const rows=tickets.filter(t=>(st==='all'||t.status===st)&&(!q||[t.request_type,t.name,t.business_name,t.email,t.contact_number,t.message].join(' ').toLowerCase().includes(q)));
-  body.innerHTML=rows.length?rows.map(t=>`<tr><td>${esc(fmtDateTime(t.created_at))}</td><td>${esc(ticketTypeLabel(t.request_type))}</td><td><strong>${esc(t.name)}</strong><div class="helper">${esc(t.business_name||'')}</div></td><td>${esc(t.email||'—')}<br>${esc(t.contact_number||'')}</td><td class="ticket-message">${esc(t.message||'')}</td><td><select class="ticket-status-select" data-ticket-status="${t.id}"><option value="pending" ${t.status==='pending'?'selected':''}>Pending</option><option value="in_progress" ${t.status==='in_progress'?'selected':''}>In Progress</option><option value="resolved" ${t.status==='resolved'?'selected':''}>Resolved</option><option value="closed" ${t.status==='closed'?'selected':''}>Closed</option></select></td><td class="actions"><button class="table-btn danger" onclick="deleteTicket('${t.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="7" class="helper">No tickets match this filter.</td></tr>';
-  body.querySelectorAll('[data-ticket-status]').forEach(sel=>sel.addEventListener('change',async()=>{const {error}=await db.from('contact_tickets').update({status:sel.value,updated_at:new Date().toISOString()}).eq('id',sel.dataset.ticketStatus); if(error)return toast(`Ticket update failed: ${error.message}`,'error'); await writeAudit('UPDATE','contact_tickets',sel.dataset.ticketStatus,{status:sel.value}); toast('Ticket status updated successfully.','success'); await loadAll();}));
+  const rows=tickets.filter(t=>(st==='all'||t.status===st)&&(!q||[t.request_type,t.name,t.business_name,t.contact_person,t.email,t.contact_number,t.category,t.address,t.city,t.province,t.message].join(' ').toLowerCase().includes(q)));
+  body.innerHTML=rows.length?rows.map(t=>`<tr><td>${esc(fmtDateTime(t.created_at))}</td><td>${esc(ticketTypeLabel(t.request_type))}</td><td><strong>${esc(t.name)}</strong><div class="helper">${esc(t.business_name||'')}</div></td><td>${esc(t.email||'—')}<br>${esc(t.contact_number||'')}</td><td class="ticket-message">${esc(t.message||'')}</td><td><span class="status-pill ${t.status==='pending'?'neutral':t.status==='resolved'?'success':'warning'}">${esc(t.status==='pending'?'Pending':t.status==='in_progress'?'In Progress':t.status==='resolved'?'Resolved':t.status==='closed'?'Closed':(t.status||'Pending'))}</span></td><td class="actions">${t.status==='pending'?`<button class="table-btn primary" onclick="acceptTicket('${t.id}')">Accept & Add Supplier</button>`:''}<button class="table-btn" onclick="editTicketStatus('${t.id}')">Edit</button><button class="table-btn danger" onclick="deleteTicket('${t.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="7" class="helper">No tickets match this filter.</td></tr>';
 }
+window.acceptTicket = async (id) => {
+  const ticket = tickets.find(t => String(t.id) === String(id));
+  if (!ticket || ticket.status !== 'pending') return;
+  const contacts = [];
+  if (ticket.email) contacts.push({platform:'email',label:'',value:ticket.email});
+  if (ticket.contact_number) contacts.push({platform:'mobile',label:'',value:ticket.contact_number});
+  const draft = {
+    business_name: ticket.business_name || '',
+    contact_person: ticket.contact_person || ticket.name || '',
+    email: ticket.email || '',
+    contact_number: ticket.contact_number || '',
+    description: ticket.message || '',
+    category: ticket.category || '',
+    address: ticket.address || '', city: ticket.city || '', province: ticket.province || '', latitude: null, longitude: null,
+    asset_folder: ticket.business_name ? slugify(ticket.business_name) : '',
+    cover_image: 'cover.jpg', logo_image: 'logo.png',
+    featured_plan: 'none', is_verified: false, is_active: true,
+    contacts_list: contacts, services_list: []
+  };
+  openModal(draft, ticket);
+};
+
+function closeTicketStatusModal(){
+  $('ticketStatusModal')?.classList.add('hidden');
+  if($('ticketStatusForm')) $('ticketStatusForm').reset();
+  if($('editingTicketId')) $('editingTicketId').value='';
+}
+window.editTicketStatus = (id) => {
+  const ticket = tickets.find(t => String(t.id) === String(id));
+  if (!ticket) return;
+  $('editingTicketId').value = ticket.id;
+  $('editingTicketStatus').value = ticket.status || 'pending';
+  $('ticketStatusModalInfo').textContent = `${ticket.business_name || 'Contact request'} — ${ticket.name || 'Requester'}`;
+  $('ticketStatusModal').classList.remove('hidden');
+};
+$('closeTicketStatusModalBtn')?.addEventListener('click', closeTicketStatusModal);
+$('cancelTicketStatusBtn')?.addEventListener('click', closeTicketStatusModal);
+$('ticketStatusForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = $('editingTicketId').value;
+  const status = $('editingTicketStatus').value;
+  if (!id) return closeTicketStatusModal();
+  const saveBtn = e.submitter;
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+  try {
+    const { error } = await db.from('contact_tickets').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    await writeAudit('UPDATE', 'contact_tickets', id, { status });
+    closeTicketStatusModal();
+    toast('Ticket status updated successfully.', 'success');
+    await loadAll();
+  } catch (err) {
+    toast(`Ticket status update failed: ${err.message || err}`, 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Status'; }
+  }
+});
+
 window.deleteTicket=async(id)=>{if(!confirm('Permanently delete this contact ticket?'))return; const {error}=await db.from('contact_tickets').delete().eq('id',id); if(error)return toast(`Ticket delete failed: ${error.message}`,'error'); await writeAudit('DELETE','contact_tickets',id); toast('Ticket deleted successfully.','success'); await loadAll();};
 async function loadOwnerSettings(){
   const {data,error}=await db.from('app_settings').select('*').eq('setting_key','owner_messenger_url').maybeSingle();
@@ -498,11 +556,14 @@ $('useAdminLocationBtn')?.addEventListener('click', () => {
   );
 });
 
-function openModal(data=null) {
+function openModal(data=null, sourceTicket=null) {
+  activeTicketIdForSupplier = sourceTicket?.id || null;
   $('supplierModal').classList.remove('hidden');
   $('modalTitle').textContent = data ? 'Edit Supplier' : 'Add Supplier';
   $('supplierId').value = data?.id || '';
   $('businessName').value = data?.business_name || '';
+  $('businessContactPerson').value = data?.contact_person || '';
+  $('businessEmail').value = data?.email || '';
   $('businessCategory').value = data?.category || '';
   $('businessAddress').value = data?.address || '';
   $('businessCity').value = data?.city || '';
@@ -520,7 +581,7 @@ function openModal(data=null) {
   $('businessFeaturedPlan').value = data?.featured_plan || (data?.is_featured ? 'lifetime' : 'none');
   renderFeaturedPlanPreview();
   $('businessVerified').checked = !!data?.is_verified;
-  $('businessActive').checked = data ? !!data.is_active : true;
+  $('businessActive').checked = data ? (data.is_active !== false) : true;
   selectedServiceIds = new Set((data?.services_list || []).map(x => x.id));
   $('serviceSearchInput').value = '';
   renderSelectedServiceChips();
@@ -538,6 +599,7 @@ function openModal(data=null) {
 
 function closeModal(){
   $('supplierModal').classList.add('hidden');
+  activeTicketIdForSupplier = null;
   $('supplierForm').reset();
   if ($('businessCoverImage')) $('businessCoverImage').value='cover.jpg';
   if ($('businessLogoImage')) $('businessLogoImage').value='logo.png';
@@ -592,6 +654,8 @@ $('supplierForm').addEventListener('submit', async (e) => {
     const isEditing = !!id;
     const supplierData = {
       business_name: $('businessName').value.trim(),
+      contact_person: $('businessContactPerson').value.trim() || null,
+      email: $('businessEmail').value.trim() || null,
       description: $('businessDescription').value.trim() || null,
       address: $('businessAddress').value.trim() || null,
       city: $('businessCity').value.trim() || null,
@@ -647,7 +711,19 @@ $('supplierForm').addEventListener('submit', async (e) => {
     }
 
     await writeAudit(isEditing ? 'UPDATE' : 'ADD', 'suppliers', supplierId, { business_name: supplierData.business_name });
-    toast(isEditing ? 'Supplier updated successfully.' : 'Supplier added successfully.', 'success');
+    if (activeTicketIdForSupplier) {
+      const ticketId = activeTicketIdForSupplier;
+      const { error: ticketUpdateError } = await db.from('contact_tickets').update({ status:'resolved', updated_at:new Date().toISOString() }).eq('id', ticketId);
+      if (ticketUpdateError) {
+        console.warn('Ticket could not be marked resolved:', ticketUpdateError.message);
+        toast('Supplier added successfully, but the request status could not be updated automatically.', 'warning');
+      } else {
+        await writeAudit('UPDATE', 'contact_tickets', ticketId, { status:'resolved', converted_to_supplier_id:supplierId });
+        toast('Request accepted and supplier added successfully.', 'success');
+      }
+    } else {
+      toast(isEditing ? 'Supplier updated successfully.' : 'Supplier added successfully.', 'success');
+    }
     closeModal();
     await loadAll();
   } catch (err) {

@@ -120,7 +120,7 @@
 
         <div id="view-tickets" class="admin-view">
           <div class="section-head"><div><p class="eyebrow">Client Requests</p><h1>Contact Tickets</h1><p class="helper">Requests for business updates, new listings, featured subscriptions, and other concerns.</p></div><button id="refreshTicketsBtn" class="btn secondary">Refresh</button></div>
-          <div class="admin-table-toolbar"><input id="ticketSearch" type="search" placeholder="Search name, business, email, message…" /><select id="ticketStatusFilter"><option value="all">All statuses</option><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div>
+          <div class="admin-table-toolbar"><input id="ticketSearch" type="search" placeholder="Search name, business, email, message…" /><select id="ticketStatusFilter"><option value="all" selected>All statuses</option><option value="pending">Pending</option><option value="in_progress">In Progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div>
           <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Name / Business</th><th>Contact</th><th>Message</th><th>Status</th><th>Actions</th></tr></thead><tbody id="ticketTableBody"></tbody></table></div>
         </div>
 
@@ -145,6 +145,8 @@
       <form id="supplierForm" class="form-grid">
         <input type="hidden" id="supplierId" />
         <label>Business Name<input id="businessName" required /></label>
+        <label>Contact Person<input id="businessContactPerson" placeholder="Owner / contact person" /></label>
+        <label>Email<input id="businessEmail" type="email" placeholder="business@example.com" /></label>
         <label>Category<input id="businessCategory" list="categoryOptions" required placeholder="e.g. Photobooth" /><datalist id="categoryOptions"></datalist></label>
         <label>Address<input id="businessAddress" /></label>
         <label>City / Municipality<input id="businessCity" /></label>
@@ -205,6 +207,29 @@
         <label class="check-row"><input id="businessVerified" type="checkbox" /> Verified</label>
         <label class="check-row"><input id="businessActive" type="checkbox" checked /> Active</label>
         <div class="full form-actions"><button type="button" id="cancelSupplierBtn" class="btn secondary">Cancel</button><button type="submit" class="btn primary">Save Supplier</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="ticketStatusModal" class="modal hidden">
+    <div class="modal-card ticket-status-modal-card">
+      <button id="closeTicketStatusModalBtn" class="modal-close" type="button">×</button>
+      <h2>Edit Ticket Status</h2>
+      <p id="ticketStatusModalInfo" class="helper" style="margin-top:8px"></p>
+      <form id="ticketStatusForm" class="form-grid single-col">
+        <input type="hidden" id="editingTicketId" />
+        <label>Status
+          <select id="editingTicketStatus">
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <div class="full form-actions">
+          <button type="button" id="cancelTicketStatusBtn" class="btn secondary">Cancel</button>
+          <button type="submit" class="btn primary">Save Status</button>
+        </div>
       </form>
     </div>
   </div>

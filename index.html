@@ -81,11 +81,27 @@
       <div class="contact-layout contact-layout-modal">
         <form id="contactTicketForm" class="contact-card form-grid">
           <label>Request Type<select id="ticketType" required><option value="">Select request type</option><option value="update_business">Update Existing Business</option><option value="add_business">Add My Business</option><option value="featured_subscription">Avail Featured Subscription</option><option value="other">Other Concern</option></select></label>
-          <label>Your Name<input id="ticketName" maxlength="100" required /></label>
-          <label>Business Name<input id="ticketBusinessName" maxlength="150" placeholder="Optional" /></label>
-          <label>Email<input id="ticketEmail" type="email" maxlength="160" /></label>
-          <label>Contact Number<input id="ticketContact" maxlength="40" /></label>
-          <label class="full">Message<textarea id="ticketMessage" rows="5" maxlength="1000" required placeholder="Tell us what you need updated, added, or which featured plan you want."></textarea></label>
+
+          <div id="genericTicketFields" class="ticket-fields-grid">
+            <label>Your Name<input id="ticketName" maxlength="100" /></label>
+            <label>Business Name<input id="ticketBusinessName" maxlength="150" placeholder="Optional" /></label>
+            <label>Email<input id="ticketEmail" type="email" maxlength="160" /></label>
+            <label>Contact Number<input id="ticketContact" maxlength="40" /></label>
+            <label class="full">Message<textarea id="ticketMessage" rows="5" maxlength="1000" placeholder="Tell us what you need updated, added, or which featured plan you want."></textarea></label>
+          </div>
+
+          <div id="addBusinessFields" class="ticket-fields-grid hidden">
+            <label>Business Name<input id="ticketAddBusinessName" maxlength="150" /></label>
+            <label>Contact Person<input id="ticketContactPerson" maxlength="120" placeholder="Owner / contact person" /></label>
+            <label>Contact Number<input id="ticketAddContactNumber" maxlength="40" placeholder="Mobile / phone number" /></label>
+            <label>Email<input id="ticketAddEmail" type="email" maxlength="160" /></label>
+            <label>Category<input id="ticketCategory" maxlength="120" placeholder="e.g. Photobooth" /></label>
+            <label>Address<input id="ticketAddress" maxlength="250" /></label>
+            <label>City / Municipality<input id="ticketCity" maxlength="120" /></label>
+            <label>Province<input id="ticketProvince" maxlength="120" /></label>
+            <label class="full">Description<textarea id="ticketDescription" rows="6" maxlength="2000" placeholder="Describe your business and the information you want listed."></textarea></label>
+          </div>
+
           <div class="full form-actions"><button id="submitTicketBtn" class="btn primary" type="submit">Submit Ticket</button></div>
         </form>
         <aside class="contact-owner-card">
